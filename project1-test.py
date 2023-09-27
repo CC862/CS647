@@ -53,6 +53,7 @@ def test_program(program_name, test_case, score_file):
 		p.stdout.readline()
 
 		ciphertext = p.stdout.readline().strip()
+		print(repr(ciphertext))  # added for debugg
 		if ciphertext[0] == '\0':
 			ciphertext = ciphertext[1:]
 		p.stdin.close()

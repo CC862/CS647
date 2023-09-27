@@ -91,75 +91,102 @@
     # This function should convert a string to an integer.
     #
     AtoI:
-        pushl %ebp                  # save old base pointer
-        movl %esp, %ebp             # set new base pointer
-        movl 8(%ebp), %esi          # get address of string
-        xorl %eax, %eax             # clear eax (our running total)
+        pushl %ebp
+        movl %esp, %ebp
+        movl 8(%ebp), %esi  # address of string
+        xorl %eax, %eax     # clear eax (our running total)
 
     AtoILoop:
-        movb (%esi), %bl            # load next byte (character) from string into bl
-        testb %bl, %bl              # test if it's the null terminator (end of string)
-        je AtoIDone                 # if zero (end of string), we are done
-        subb $'0', %bl              # convert ASCII character to integer (subtract ASCII value of '0')
-        imull $10, %eax, %eax       # multiply running total by 10 (shift left by one decimal place)
-        addl %ebx, %eax             # add new digit to running total
-        incl %esi                   # move to next character in string
-        jmp AtoILoop                # repeat process for next character
+        movb (%esi), %bl    # load next byte (character) from string into bl
+        cmpb $0xa, %bl      # compare the newline character vs bl
+        je AtoIDone         # if newline (end of string), we are done
+        subb $'0', %bl      # convert ASCII character to integer (subtract ASCII value of '0')
+        imull $10, %eax, %eax # multiply running total by 10 (shift left by one decimal place)
+        addl %ebx, %eax     # add new digit to running total
+        incl %esi           # move to the next character in the string
+        jmp AtoILoop        # repeat the process for the next character
 
     AtoIDone:
-        popl %ebp                   # restore old base pointer
-        ret                         # return, result is in eax
+        popl %ebp           # restore old base pointer
+        ret                 # return, the result is in eax
 
 
 
+    # CaesarCipher:
 
-    #CaesarCipher:
-
-    #
-    # Fill in code for CaesarCipher Function here
-    #
     CaesarCipher:
-        pushl %ebp                  # save old base pointer
-        movl %esp, %ebp             # set new base pointer
-        movl 8(%ebp), %esi          # get address of plaintext string
-        movl 12(%ebp), %ecx         # get shift value
+        pushl %ebp
+        movl %esp, %ebp
+        movl 8(%ebp), %esi       # get address of plaintext string
+        movl ShiftValue, %ecx    # get shift value from the global variable
+
+        # Ensure the shift value is within the range 0-25
+        cmpl $0, %ecx
+        jl ShiftNegative         # If shift value is negative, jump to ShiftNegative
 
     CaesarLoop:
-        movb (%esi), %al            # load next byte (character) from plaintext into al
-        testb %al, %al              # test if it's the null terminator (end of string)
-        je CaesarDone               # if zero (end of string), we are done
-        cmpb $'A', %al              # check if character is uppercase
-        jb NotAlpha                 # if below 'A', not an alphabetic character
-        cmpb $'Z', %al              # check if character is uppercase
-        ja LowerCase                # if above 'Z', it's a lowercase or not an alphabetic character
+        movb $0, %bl             # Clear the uppercase flag
+        movb (%esi), %al         # load next byte (character) from plaintext into al
+        testb %al, %al           # test if it's the null terminator (end of string)
+        je CaesarDone            # if zero (end of string), we are done
 
-        # Handle uppercase letters
-        addb %cl, %al               # add shift value
-        cmpb $'Z', %al              # check if we've gone past 'Z'
-        jbe NotAlpha                # if below or equal to 'Z', we are good
-        subb $26, %al               # else, wrap around
-        jmp NotAlpha                # move to next character
+        cmpb $'A', %al           # check if character is uppercase
+        jl NotUppercase          # if below 'A', not an uppercase alphabetic character
+        cmpb $'Z', %al           # check if character is uppercase
+        jg NotUppercase          # if above 'Z', not an uppercase alphabetic character
+        movb $1, %bl             # Set uppercase flag
+        subb $'A', %al           # convert to 0-25
+        addb %cl, %al            # add shift value
+        jmp Mod26                # jump to Mod26 to perform modulo operation
 
-    LowerCase:
-        cmpb $'a', %al              # check if character is lowercase
-        jb NotAlpha                 # if below 'a', not an alphabetic character
-        cmpb $'z', %al              # check if character is lowercase
-        ja NotAlpha                 # if above 'z', not an alphabetic character
+    NotUppercase:
+        cmpb $'a', %al           # check if character is lowercase
+        jl NotAlpha              # if below 'a', not an alphabetic character
+        cmpb $'z', %al           # check if character is lowercase
+        jg NotAlpha              # if above 'z', not an alphabetic character
+        subb $'a', %al           # convert to 0-25
+        addb %cl, %al            # add shift value
+        jmp Mod26                # jump to Mod26 to perform modulo operation
 
-        # Handle lowercase letters
-        addb %cl, %al               # add shift value
-        cmpb $'z', %al              # check if we've gone past 'z'
-        jbe NotAlpha                # if below or equal to 'z', we are good
-        subb $26, %al               # else, wrap around
+    Mod26:
+        # handle wrapping for positive shift values
+        cmpb $26, %al        # compare with 26
+        jb NoWrap            # if below 26, no wrapping needed
+        subb $26, %al        # subtract 26 if above or equal to 26
+
+    NoWrap:
+        # handle wrapping for negative shift values
+        cmpb $0, %al         # compare with 0
+        jge UpdateChar       # if greater or equal to 0, jump to UpdateChar
+        addb $26, %al        # add 26 if negative
+
+    UpdateChar:
+        test %ebx, %ebx          # Check if uppercase flag is set
+        jnz IsUppercase          # If set, jump to IsUppercase
+        addb $'a', %al           # convert back to 'a'-'z'
+        jmp CharDone
+
+    IsUppercase:
+        addb $'A', %al # convert back to 'A'-'Z'
+
+    CharDone:
+        movb %al, (%esi)         # store possibly-modified character back into string
+        incl %esi                # move to the next character in the string
+        jmp CaesarLoop           # repeat the process for the next character
+
+    ShiftNegative:
+        # Handle a negative shift value (shift left by the absolute value of the shift value)
+        negl %ecx                # Negate the shift value
+        jmp CaesarLoop
 
     NotAlpha:
-        movb %al, (%esi)            # store possibly-modified character back into string
-        incl %esi                   # move to next character in string
-        jmp CaesarLoop              # repeat process for next character
+        incl %esi                # move to the next character in the string
+        jmp CaesarLoop           # repeat the process for the next character
 
     CaesarDone:
-        popl %ebp                   # restore old base pointer
-        ret                         # return, modified string is at original address
+        popl %ebp                # restore the old base pointer
+        ret                      # return, the modified string is at the original address
+
 
 
     _start:
@@ -202,7 +229,6 @@
         addl    $8, %esp
 
 
-
         # Convert the shift value from a string to an integer.
         # FILL IN HERE
         pushl $intBuffer
@@ -210,13 +236,20 @@
         addl $4, %esp
         movl %eax, ShiftValue
 
+        # Ensure the shift value is within the range 0-25
+        movl ShiftValue, %eax
+        xorl %edx, %edx  # Clear edx for division
+        movl $26, %ecx   # Set divisor to 26
+        divl %ecx        # eax = eax / ecx, edx = eax % ecx
+        movl %edx, ShiftValue
+
         # Perform the caesar cipheR
         # FILL IN HERE
-        movl ShiftValue, %eax
-        pushl %eax
-        pushl $buffer
+        pushl ShiftValue  # Push the shift value as an argument
+        pushl $buffer     # Push the buffer as an argument
         call CaesarCipher
-        addl $8, %esp
+        addl $8, %esp     # Remove the arguments from the stack
+
 
         # Get the size of the ciphertext
         # The ciphertext must be referenced by the 'buffer' label
