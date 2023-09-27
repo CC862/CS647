@@ -126,24 +126,25 @@
 
     CaesarLoop:
         movb $0, %bl             # Clear the uppercase flag
-        movb (%esi), %al         # load next byte (character) from plaintext into al
-        testb %al, %al           # test if it's the null terminator (end of string)
+        movb (%esi), %al         # load next byte (char) from plaintext into al
+        testb %al, %al           # test if it's the null terminator (end of str)
         je CaesarDone            # if zero (end of string), we are done
 
         cmpb $'A', %al           # check if character is uppercase
-        jl NotUppercase          # if below 'A', not an uppercase alphabetic character
+        jl NotUppercase          # if below 'A', not an uppercase alphabetic char
         cmpb $'Z', %al           # check if character is uppercase
-        jg NotUppercase          # if above 'Z', not an uppercase alphabetic character
+        jg NotUppercase          # if above 'Z', not an uppercase alphabetic char
         movb $1, %bl             # Set uppercase flag
         subb $'A', %al           # convert to 0-25
         addb %cl, %al            # add shift value
         jmp Mod26                # jump to Mod26 to perform modulo operation
 
     NotUppercase:
+        # handler for cases of NOT upper case
         cmpb $'a', %al           # check if character is lowercase
-        jl NotAlpha              # if below 'a', not an alphabetic character
+        jl NotAlpha              # if below 'a', not an alphabetic char
         cmpb $'z', %al           # check if character is lowercase
-        jg NotAlpha              # if above 'z', not an alphabetic character
+        jg NotAlpha              # if above 'z', not an alphabetic char
         subb $'a', %al           # convert to 0-25
         addb %cl, %al            # add shift value
         jmp Mod26                # jump to Mod26 to perform modulo operation
@@ -161,27 +162,31 @@
         addb $26, %al        # add 26 if negative
 
     UpdateChar:
+        # hanldes how the current char is to be processed
         test %ebx, %ebx          # Check if uppercase flag is set
         jnz IsUppercase          # If set, jump to IsUppercase
         addb $'a', %al           # convert back to 'a'-'z'
-        jmp CharDone
+        jmp CharDone             # repeat the process for the next char
 
     IsUppercase:
+        # handler for cases of upper case
         addb $'A', %al # convert back to 'A'-'Z'
 
     CharDone:
-        movb %al, (%esi)         # store possibly-modified character back into string
-        incl %esi                # move to the next character in the string
-        jmp CaesarLoop           # repeat the process for the next character
+        # handles the processing of hte current char and tells point to move to the nxt char
+        movb %al, (%esi)         # store possibly-modified char back into str
+        incl %esi                # move to the next char in the str
+        jmp CaesarLoop           # repeat the process for the next char
 
     ShiftNegative:
         # Handle a negative shift value (shift left by the absolute value of the shift value)
         negl %ecx                # Negate the shift value
-        jmp CaesarLoop
+        jmp CaesarLoop           # repeat the process for the next char
 
     NotAlpha:
-        incl %esi                # move to the next character in the string
-        jmp CaesarLoop           # repeat the process for the next character
+        # handles non alphabetic chars, used est cases expected output to determin behavior 
+        incl %esi                # move to the next char in the str
+        jmp CaesarLoop           # repeat the process for the next char
 
     CaesarDone:
         popl %ebp                # restore the old base pointer
@@ -231,10 +236,10 @@
 
         # Convert the shift value from a string to an integer.
         # FILL IN HERE
-        pushl $intBuffer
-        call AtoI
-        addl $4, %esp
-        movl %eax, ShiftValue
+        pushl $intBuffer       # Push the address of the buffer containing the string to the stack
+        call AtoI              # Call the AtoI function
+        addl $4, %esp          # adding 4 to the stack pointer %esp
+        movl %eax, ShiftValue  # moves that int value from the %eax register into the global var ShiftValue
 
         # Ensure the shift value is within the range 0-25
         movl ShiftValue, %eax
