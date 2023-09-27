@@ -1,0 +1,39 @@
+==================== Program Build ====================
+
+Assembly: Passed!
+Linker: Passed!
+
+==================== Test Case ====================
+
+	Program output:    wtaad ldgas
+	Expected output:   wtaad ldgas
+
+
+	Result:            Passed!
+	Points:            25/25
+==================== Test Case ====================
+
+	Program output:    EBOB ZLJB YRCCBO LSBOCILTP
+	Expected output:   EBOB ZLJB YRCCBO LSBOCILTP
+
+
+	Result:            Passed!
+	Points:            25/25
+==================== Test Case ====================
+
+	Program output:    T nly’e nlccj te qzc jzf, mfe T nly nlccj jzf.
+	Expected output:   T nly’e nlccj te qzc jzf, mfe T nly nlccj jzf.
+
+
+	Result:            Passed!
+	Points:            25/25
+==================== Test Case ====================
+
+	Program output:    H3rjGtE@hhL0gs?
+	Expected output:   H3rjGtE@hhL0gs?
+
+
+	Result:            Passed!
+	Points:            25/25
+
+Total Score: 100/100
