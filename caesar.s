@@ -196,86 +196,81 @@
 
     _start:
 
-        # Print prompt for plaintext
-        pushl   $lenPromptForPlaintext
-        pushl   $PromptForPlaintext
-        call    PrintFunction
-        addl    $8, %esp
+    # Print prompt for plaintext
+    pushl   $lenPromptForPlaintext   # Push the length of the plaintext prompt
+    pushl   $PromptForPlaintext      # Push the address of the plaintext prompt string
+    call    PrintFunction            # Call the PrintFunction to display the prompt
+    addl    $8, %esp                 # Remove the arguments from the stack
 
-        # Read the plaintext from stdin
-        pushl   $102
-        pushl   $buffer
-        call    ReadFromStdin
-        addl    $8, %esp
+    # Read the plaintext from stdin
+    pushl   $102                      # Push the maximum length of plaintext to read
+    pushl   $buffer                   # Push the address of the buffer to store the input
+    call    ReadFromStdin            # Call ReadFromStdin to read plaintext
+    addl    $8, %esp                 # Remove the arguments from the stack
 
-        # Print newline
-        pushl   $1
-        pushl   $Newline
-        call    PrintFunction
-        addl    $8, %esp
+    # Print newline
+    pushl   $1                        # Push the number of bytes to write (1 for newline)
+    pushl   $Newline                  # Push the address of the newline string
+    call    PrintFunction            # Call PrintFunction to display a newline
+    addl    $8, %esp                 # Remove the arguments from the stack
 
+    # Get input string and adjust the stack pointer back after
+    pushl   $lenPromptForShiftValue   # Push the length of the shift value prompt
+    pushl   $PromptForShiftValue      # Push the address of the shift value prompt string
+    call    PrintFunction            # Call PrintFunction to display the shift value prompt
+    addl    $8, %esp                 # Remove the arguments from the stack
 
-        # Get input string and adjust the stack pointer back after
-        pushl   $lenPromptForShiftValue
-        pushl   $PromptForShiftValue
-        call    PrintFunction
-        addl    $8, %esp
+    # Read the shift value from stdin
+    pushl   $4                        # Push the number of bytes to read (4 for an integer)
+    pushl   $intBuffer                # Push the address of the buffer to store the integer
+    call    ReadFromStdin            # Call ReadFromStdin to read the shift value
+    addl    $8, %esp                 # Remove the arguments from the stack
 
-        # Read the shift value from stdin
-        pushl   $4
-        pushl   $intBuffer
-        call    ReadFromStdin
-        addl    $8, %esp
+    # Print newline
+    pushl   $1                        # Push the number of bytes to write (1 for newline)
+    pushl   $Newline                  # Push the address of the newline string
+    call    PrintFunction            # Call PrintFunction to display a newline
+    addl    $8, %esp                 # Remove the arguments from the stack
 
-        # Print newline
-        pushl   $1
-        pushl   $Newline
-        call    PrintFunction
-        addl    $8, %esp
+    # Convert the shift value from a string to an integer.
+    pushl $intBuffer                   # Push the address of the buffer containing the string
+    call AtoI                          # Call the AtoI function to convert to an integer
+    addl $4, %esp                      # Remove the converted integer from the stack
+    movl %eax, ShiftValue              # Move the integer to the ShiftValue global variable
 
+    # Ensure the shift value is within the range 0-25
+    movl ShiftValue, %eax              # Copy ShiftValue to eax for range adjustment
+    xorl %edx, %edx                    # Clear edx for division
+    movl $26, %ecx                     # Set divisor to 26
+    divl %ecx                          # eax = eax / ecx, edx = eax % ecx
+    movl %edx, ShiftValue              # Update ShiftValue with the adjusted value
 
-        # Convert the shift value from a string to an integer.
-        # FILL IN HERE
-        pushl $intBuffer       # Push the address of the buffer containing the string to the stack
-        call AtoI              # Call the AtoI function
-        addl $4, %esp          # adding 4 to the stack pointer %esp
-        movl %eax, ShiftValue  # moves that int value from the %eax register into the global var ShiftValue
+    # Perform the Caesar cipher
+    pushl ShiftValue                   # Push the shift value as an argument
+    pushl $buffer                      # Push the buffer as an argument
+    call CaesarCipher                  # Call CaesarCipher to encrypt the plaintext
+    addl $8, %esp                      # Remove the arguments from the stack
 
-        # Ensure the shift value is within the range 0-25
-        movl ShiftValue, %eax
-        xorl %edx, %edx  # Clear edx for division
-        movl $26, %ecx   # Set divisor to 26
-        divl %ecx        # eax = eax / ecx, edx = eax % ecx
-        movl %edx, ShiftValue
+    # Get the size of the ciphertext
+    pushl   $buffer                     # Push the address of the ciphertext buffer
+    call    GetStringLength             # Call GetStringLength to calculate the length
+    addl    $4, %esp                    # Remove the argument from the stack
 
-        # Perform the caesar cipheR
-        # FILL IN HERE
-        pushl ShiftValue  # Push the shift value as an argument
-        pushl $buffer     # Push the buffer as an argument
-        call CaesarCipher
-        addl $8, %esp     # Remove the arguments from the stack
+    # Print the ciphertext
+    pushl   %eax                         # Push the length of the ciphertext
+    pushl   $buffer                      # Push the address of the ciphertext buffer
+    call    PrintFunction                # Call PrintFunction to display the ciphertext
+    addl    $8, %esp                     # Remove the arguments from the stack
 
+    # Print newline
+    pushl   $1                            # Push the number of bytes to write (1 for newline)
+    pushl   $Newline                      # Push the address of the newline string
+    call    PrintFunction                # Call PrintFunction to display a newline
+    addl    $8, %esp                     # Remove the arguments from the stack
 
-        # Get the size of the ciphertext
-        # The ciphertext must be referenced by the 'buffer' label
-        pushl   $buffer
-        call    GetStringLength
-        addl    $4, %esp
+    # Exit the program
+    Exit:
+        movl    $1, %eax                  # Set syscall number for exit
+        movl    $0, %ebx                  # Set exit status
+        int     $0x80                     # Invoke the exit syscall
 
-        # Print the ciphertext
-        pushl   %eax
-        pushl   $buffer
-        call    PrintFunction
-        addl    $8, %esp
-
-        # Print newline
-        pushl   $1
-        pushl   $Newline
-        call    PrintFunction
-        addl    $8, %esp
-
-        # Exit the program
-        Exit:
-            movl    $1, %eax
-            movl    $0, %ebx
-            int     $0x80
