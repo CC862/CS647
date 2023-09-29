@@ -126,24 +126,25 @@
 
     CaesarLoop:
         movb $0, %bl             # Clear the uppercase flag
-        movb (%esi), %al         # load next byte (character) from plaintext into al
-        testb %al, %al           # test if it's the null terminator (end of string)
+        movb (%esi), %al         # load next byte (char) from plaintext into al
+        testb %al, %al           # test if it's the null terminator (end of str)
         je CaesarDone            # if zero (end of string), we are done
 
         cmpb $'A', %al           # check if character is uppercase
-        jl NotUppercase          # if below 'A', not an uppercase alphabetic character
+        jl NotUppercase          # if below 'A', not an uppercase alphabetic char
         cmpb $'Z', %al           # check if character is uppercase
-        jg NotUppercase          # if above 'Z', not an uppercase alphabetic character
+        jg NotUppercase          # if above 'Z', not an uppercase alphabetic char
         movb $1, %bl             # Set uppercase flag
         subb $'A', %al           # convert to 0-25
         addb %cl, %al            # add shift value
         jmp Mod26                # jump to Mod26 to perform modulo operation
 
     NotUppercase:
+        # handler for cases of NOT upper case
         cmpb $'a', %al           # check if character is lowercase
-        jl NotAlpha              # if below 'a', not an alphabetic character
+        jl NotAlpha              # if below 'a', not an alphabetic char
         cmpb $'z', %al           # check if character is lowercase
-        jg NotAlpha              # if above 'z', not an alphabetic character
+        jg NotAlpha              # if above 'z', not an alphabetic char
         subb $'a', %al           # convert to 0-25
         addb %cl, %al            # add shift value
         jmp Mod26                # jump to Mod26 to perform modulo operation
@@ -161,27 +162,31 @@
         addb $26, %al        # add 26 if negative
 
     UpdateChar:
+        # hanldes how the current char is to be processed
         test %ebx, %ebx          # Check if uppercase flag is set
         jnz IsUppercase          # If set, jump to IsUppercase
         addb $'a', %al           # convert back to 'a'-'z'
-        jmp CharDone
+        jmp CharDone             # repeat the process for the next char
 
     IsUppercase:
+        # handler for cases of upper case
         addb $'A', %al # convert back to 'A'-'Z'
 
     CharDone:
-        movb %al, (%esi)         # store possibly-modified character back into string
-        incl %esi                # move to the next character in the string
-        jmp CaesarLoop           # repeat the process for the next character
+        # handles the processing of hte current char and tells point to move to the nxt char
+        movb %al, (%esi)         # store possibly-modified char back into str
+        incl %esi                # move to the next char in the str
+        jmp CaesarLoop           # repeat the process for the next char
 
     ShiftNegative:
         # Handle a negative shift value (shift left by the absolute value of the shift value)
         negl %ecx                # Negate the shift value
-        jmp CaesarLoop
+        jmp CaesarLoop           # repeat the process for the next char
 
     NotAlpha:
-        incl %esi                # move to the next character in the string
-        jmp CaesarLoop           # repeat the process for the next character
+        # handles non alphabetic chars, used est cases expected output to determin behavior 
+        incl %esi                # move to the next char in the str
+        jmp CaesarLoop           # repeat the process for the next char
 
     CaesarDone:
         popl %ebp                # restore the old base pointer
@@ -191,86 +196,81 @@
 
     _start:
 
-        # Print prompt for plaintext
-        pushl   $lenPromptForPlaintext
-        pushl   $PromptForPlaintext
-        call    PrintFunction
-        addl    $8, %esp
+    # Print prompt for plaintext
+    pushl   $lenPromptForPlaintext   # Push the length of the plaintext prompt
+    pushl   $PromptForPlaintext      # Push the address of the plaintext prompt string
+    call    PrintFunction            # Call the PrintFunction to display the prompt
+    addl    $8, %esp                 # Remove the arguments from the stack
 
-        # Read the plaintext from stdin
-        pushl   $102
-        pushl   $buffer
-        call    ReadFromStdin
-        addl    $8, %esp
+    # Read the plaintext from stdin
+    pushl   $102                      # Push the maximum length of plaintext to read
+    pushl   $buffer                   # Push the address of the buffer to store the input
+    call    ReadFromStdin            # Call ReadFromStdin to read plaintext
+    addl    $8, %esp                 # Remove the arguments from the stack
 
-        # Print newline
-        pushl   $1
-        pushl   $Newline
-        call    PrintFunction
-        addl    $8, %esp
+    # Print newline
+    pushl   $1                        # Push the number of bytes to write (1 for newline)
+    pushl   $Newline                  # Push the address of the newline string
+    call    PrintFunction            # Call PrintFunction to display a newline
+    addl    $8, %esp                 # Remove the arguments from the stack
 
+    # Get input string and adjust the stack pointer back after
+    pushl   $lenPromptForShiftValue   # Push the length of the shift value prompt
+    pushl   $PromptForShiftValue      # Push the address of the shift value prompt string
+    call    PrintFunction            # Call PrintFunction to display the shift value prompt
+    addl    $8, %esp                 # Remove the arguments from the stack
 
-        # Get input string and adjust the stack pointer back after
-        pushl   $lenPromptForShiftValue
-        pushl   $PromptForShiftValue
-        call    PrintFunction
-        addl    $8, %esp
+    # Read the shift value from stdin
+    pushl   $4                        # Push the number of bytes to read (4 for an integer)
+    pushl   $intBuffer                # Push the address of the buffer to store the integer
+    call    ReadFromStdin            # Call ReadFromStdin to read the shift value
+    addl    $8, %esp                 # Remove the arguments from the stack
 
-        # Read the shift value from stdin
-        pushl   $4
-        pushl   $intBuffer
-        call    ReadFromStdin
-        addl    $8, %esp
+    # Print newline
+    pushl   $1                        # Push the number of bytes to write (1 for newline)
+    pushl   $Newline                  # Push the address of the newline string
+    call    PrintFunction            # Call PrintFunction to display a newline
+    addl    $8, %esp                 # Remove the arguments from the stack
 
-        # Print newline
-        pushl   $1
-        pushl   $Newline
-        call    PrintFunction
-        addl    $8, %esp
+    # Convert the shift value from a string to an integer.
+    pushl $intBuffer                   # Push the address of the buffer containing the string
+    call AtoI                          # Call the AtoI function to convert to an integer
+    addl $4, %esp                      # Remove the converted integer from the stack
+    movl %eax, ShiftValue              # Move the integer to the ShiftValue global variable
 
+    # Ensure the shift value is within the range 0-25
+    movl ShiftValue, %eax              # Copy ShiftValue to eax for range adjustment
+    xorl %edx, %edx                    # Clear edx for division
+    movl $26, %ecx                     # Set divisor to 26
+    divl %ecx                          # eax = eax / ecx, edx = eax % ecx
+    movl %edx, ShiftValue              # Update ShiftValue with the adjusted value
 
-        # Convert the shift value from a string to an integer.
-        # FILL IN HERE
-        pushl $intBuffer
-        call AtoI
-        addl $4, %esp
-        movl %eax, ShiftValue
+    # Perform the Caesar cipher
+    pushl ShiftValue                   # Push the shift value as an argument
+    pushl $buffer                      # Push the buffer as an argument
+    call CaesarCipher                  # Call CaesarCipher to encrypt the plaintext
+    addl $8, %esp                      # Remove the arguments from the stack
 
-        # Ensure the shift value is within the range 0-25
-        movl ShiftValue, %eax
-        xorl %edx, %edx  # Clear edx for division
-        movl $26, %ecx   # Set divisor to 26
-        divl %ecx        # eax = eax / ecx, edx = eax % ecx
-        movl %edx, ShiftValue
+    # Get the size of the ciphertext
+    pushl   $buffer                     # Push the address of the ciphertext buffer
+    call    GetStringLength             # Call GetStringLength to calculate the length
+    addl    $4, %esp                    # Remove the argument from the stack
 
-        # Perform the caesar cipheR
-        # FILL IN HERE
-        pushl ShiftValue  # Push the shift value as an argument
-        pushl $buffer     # Push the buffer as an argument
-        call CaesarCipher
-        addl $8, %esp     # Remove the arguments from the stack
+    # Print the ciphertext
+    pushl   %eax                         # Push the length of the ciphertext
+    pushl   $buffer                      # Push the address of the ciphertext buffer
+    call    PrintFunction                # Call PrintFunction to display the ciphertext
+    addl    $8, %esp                     # Remove the arguments from the stack
 
+    # Print newline
+    pushl   $1                            # Push the number of bytes to write (1 for newline)
+    pushl   $Newline                      # Push the address of the newline string
+    call    PrintFunction                # Call PrintFunction to display a newline
+    addl    $8, %esp                     # Remove the arguments from the stack
 
-        # Get the size of the ciphertext
-        # The ciphertext must be referenced by the 'buffer' label
-        pushl   $buffer
-        call    GetStringLength
-        addl    $4, %esp
+    # Exit the program
+    Exit:
+        movl    $1, %eax                  # Set syscall number for exit
+        movl    $0, %ebx                  # Set exit status
+        int     $0x80                     # Invoke the exit syscall
 
-        # Print the ciphertext
-        pushl   %eax
-        pushl   $buffer
-        call    PrintFunction
-        addl    $8, %esp
-
-        # Print newline
-        pushl   $1
-        pushl   $Newline
-        call    PrintFunction
-        addl    $8, %esp
-
-        # Exit the program
-        Exit:
-            movl    $1, %eax
-            movl    $0, %ebx
-            int     $0x80
